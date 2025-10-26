@@ -15,12 +15,12 @@ export const stopEngine = () => new Promise<boolean>(async (resolve, reject) => 
         ]);
         resolve(ended.every(v => v === true));
     }
-    // if (Site.PRODUCTION) {
+    if (Site.PRODUCTION) {
         TelegramEngine.sendMessage(`😴 ${Site.TITLE} is going back to sleep at ${getDateTime()}`, Site.TG_ADMIN_CHAT_ID, async mid => {
             conclude();
         });
-    // }
-    // else {
-    //     conclude();
-    // }
+    }
+    else {
+        conclude();
+    }
 });

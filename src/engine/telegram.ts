@@ -4,6 +4,7 @@ import { Log } from '../lib/log';
 import { getDateTime } from '../lib/date_time';
 import { FFF, formatNumber } from '../lib/format_number';
 import { RegexPatterns } from '../lib/regex';
+import { ErrorResponse } from './error_res';
 
 process.env["NTBA_FIX_350"] = 'true';
 
@@ -56,13 +57,28 @@ export class TelegramEngine {
             }
             TelegramEngine.bot.on("text", async (msg) => {
                 let content = (msg.text || "").trim();
-                const pid = msg.chat.id || msg.from?.id;
-                if (pid) {
+                const pid = msg.from?.id || msg.chat.id;
+                const name = msg.from?.first_name || msg.chat.first_name;
+                const mid = msg.message_id;
+                const lang = msg.from?.language_code;
+                if (pid && (mid || mid === 0)) {
                     if (/^\/start$/.test(content)) {
-                        TelegramEngine.sendMessage(TelegramEngine.startMessage(), pid);
+                        const m = await ErrorResponse.get('start', lang);
+                        TelegramEngine.sendTextMessage(m, pid);
                     }
                     else {
-                        TelegramEngine.sendMessage(`😔 Sorry! ${Site.TITLE} could not understand your message\n\n` + TelegramEngine.startMessage(), pid);
+                        TelegramEngine.sendTextMessage('Understood', pid);
+                    }
+                }
+            });
+
+            TelegramEngine.bot.on("message", async (msg) => {
+                const pid = msg.from?.id || msg.chat.id;
+                const lang = msg.from?.language_code;
+                if(pid){
+                    if(!msg.text){
+                        const m = await ErrorResponse.get('user', lang);
+                        TelegramEngine.sendTextMessage(m, pid);
                     }
                 }
             });
@@ -142,12 +158,29 @@ export class TelegramEngine {
     private static globalCount: number = 0;
     private static chatCounts: any = {};
 
+    static sendTextMessage = (message: string, chatid: any, callback: CBF = (id) => { }, opts: TelegramBot.SendMessageOptions = {
+        // parse_mode: "",
+        disable_web_page_preview: true,
+    }, isTemp = false,) => {
+        TelegramEngine.messageQueue.push({
+            message,
+            callback,
+            opts,
+            isTemp,
+            chatid,
+        });
+
+        if (!TelegramEngine.processing) {
+            TelegramEngine.processQueue();
+        }
+    }
+
     static sendMessage = (message: string, chatid: any, callback: CBF = (id) => { }, opts: TelegramBot.SendMessageOptions = {
         parse_mode: "MarkdownV2",
         disable_web_page_preview: true,
     }, isTemp = false,) => {
         TelegramEngine.messageQueue.push({
-            message,
+            message: TelegramEngine.sanitizeMessage(message),
             callback,
             opts,
             isTemp,
@@ -223,7 +256,7 @@ export class TelegramEngine {
 
     private static sendIndividualMessage = (msg: any) => {
         const { callback, message, opts, isTemp, chatid } = msg;
-        TelegramEngine.bot.sendMessage(chatid, TelegramEngine.sanitizeMessage(message), opts).then((mess) => {
+        TelegramEngine.bot.sendMessage(chatid, message, opts).then((mess) => {
             Log.dev(`Telegram > Sent text.`);
             if (!isTemp) {
                 TelegramEngine.lastMessageID = mess.message_id;
