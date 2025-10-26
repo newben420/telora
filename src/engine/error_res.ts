@@ -25,22 +25,22 @@ const defaults: Record<ERType, string> = {
 export class ErrorResponse {
     private static cache: ERCache = {
         'server': {
-            "en": "Sorry!, I encountered an error while trying to respond to you. Please try again",
+            "en": Site.ERR_RES_EN_SERVER,
         },
         'user': {
-            "en": "Sorry, I could not read what you sent. I only understand texts.",
+            "en": Site.ERR_RES_EN_USER,
         },
         'start': {
-            "en": `Hello there! I am ${Site.TITLE}, your AI companion. What's on your mind today?`
+            "en": Site.ERR_RES_EN_START,
         },
         'block': {
-            "en": "You have been blocked. Please do not respond or send another message."
+            "en": Site.ERR_RES_EN_BLOCK,
         },
         'prem_limit': {
-            "en": "You have reached your message limit. Please try again in 1 hour."
+            "en": Site.ERR_RES_EN_PREM_LIMIT,
         },
         'upgrade': {
-            "en": "You have reached your message limit. Upgrade to premium to remove your limit, or try again in 1 hour."
+            "en": Site.ERR_RES_EN_UPGRADE,
         },
     }
 

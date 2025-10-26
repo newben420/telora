@@ -48,4 +48,11 @@ export class Site {
     static FL_MAX_MESSAGE_LENGTH: number = parseInt(process.env['FL_MAX_MESSAGE_LENGTH'] || '0') || 256;
     static FL_MAX_REPLY_LENGTH: number = parseInt(process.env['FL_MAX_REPLY_LENGTH'] || '0') || 256;
     static FL_SUMMARY_AFTER_REP_COUNT: number = parseInt(process.env['FL_SUMMARY_AFTER_REP_COUNT'] || '0') || 10;
+
+    static ERR_RES_EN_SERVER: string = process.env['ERR_RES_EN_SERVER'] || `Sorry!, I encountered an error while trying to respond to you. Please try again`;
+    static ERR_RES_EN_USER: string = process.env['ERR_RES_EN_USER'] || `Sorry, I could not read what you sent. I only understand texts.`;
+    static ERR_RES_EN_START: string = process.env['ERR_RES_EN_START'] || `Hello there! I am ${Site.TITLE}, your AI companion. What's on your mind today?`;
+    static ERR_RES_EN_BLOCK: string = process.env['ERR_RES_EN_BLOCK'] || `You have been blocked. Please do not respond or send another message.`;
+    static ERR_RES_EN_PREM_LIMIT: string = process.env['ERR_RES_EN_PREM_LIMIT'] || `You have reached your message limit. Please try again in 1 hour.`;
+    static ERR_RES_EN_UPGRADE: string = process.env['ERR_RES_EN_UPGRADE'] || `You have reached your message limit. Upgrade to premium to remove your limit, or try again in 1 hour.`;
 }
