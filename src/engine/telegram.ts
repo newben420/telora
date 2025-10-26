@@ -1,11 +1,11 @@
+import { ensureChatPersistence } from './../lib/ensure_chat_persistence';
 import { ensureUserRegistration } from './../lib/ensure_registration';
 import TelegramBot from 'node-telegram-bot-api';
 import { Site } from '../site';
 import { Log } from '../lib/log';
-import { getDateTime } from '../lib/date_time';
-import { FFF, formatNumber } from '../lib/format_number';
-import { RegexPatterns } from '../lib/regex';
 import { ErrorResponse } from './error_res';
+import { PromptEngine } from './prompt';
+import { GroqEngine } from './groq';
 
 process.env["NTBA_FIX_350"] = 'true';
 
@@ -55,7 +55,9 @@ export class TelegramEngine {
                 const pid = msg.from?.id || msg.chat.id;
                 const name = msg.from?.first_name || msg.chat.first_name;
                 const mid = msg.message_id;
-                const lang = msg.from?.language_code;
+                let lang = msg.from?.language_code || '';
+                const mts = Date.now();
+                lang = /^[a-z]{2}$/i.test(lang) ? lang : 'en';
                 if (pid && (mid || mid === 0)) {
                     if (/^\/start$/.test(content)) {
                         const m = await ErrorResponse.get('start', lang);
@@ -64,14 +66,72 @@ export class TelegramEngine {
                     else {
                         const r1 = await ensureUserRegistration(pid, lang);
                         if (r1.succ) {
-                            TelegramEngine.sendTextMessage('Understood', pid);
+                            const pastMessages: {
+                                role: 'assistant' | 'user',
+                                content: string,
+                            }[] = r1.message.messages;
+                            const system: {
+                                role: 'system',
+                                content: string,
+                            } = {
+                                role: 'system',
+                                content: PromptEngine.chatSystem(`${name ? `User's first name is ${name}. ` : ''}${r1.message.summary}`),
+                            }
+                            const userid: number = r1.message.id;
+                            const last_rep_ts = r1.message.last_rep_ts;
+                            const curr_rep_count = r1.message.curr_rep_count;
+                            const mcount = r1.message.mcount;
+                            const rep_since_summ = r1.message.rep_since_summ;
+                            const messages = [
+                                system,
+                                ...pastMessages,
+                                {
+                                    role: 'user',
+                                    content: content.length > Site.FL_MAX_MESSAGE_LENGTH ? content.slice(0, Site.FL_MAX_MESSAGE_LENGTH) : content,
+                                }
+                            ] as any;
+                            GroqEngine.request({
+                                messages,
+                                async callback(r2) {
+                                    if (r2.succ) {
+                                        const reply = r2.message;
+                                        TelegramEngine.sendTextMessage(reply, pid, rid => {
+                                            if (rid) {
+                                                const rts = Date.now();
+                                                const r3 = ensureChatPersistence(
+                                                    content,
+                                                    mid,
+                                                    mts,
+                                                    reply,
+                                                    rid,
+                                                    rts,
+                                                    userid,
+                                                    last_rep_ts,
+                                                    curr_rep_count,
+                                                    mcount,
+                                                    rep_since_summ,
+                                                    r1.message.summary,
+                                                )
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        const m = await ErrorResponse.get('server', lang);
+                                        TelegramEngine.sendTextMessage(m, pid);
+                                    }
+                                },
+                            });
                         }
                         else {
-                            if(!r1.extra.donotsend){
+                            if (!r1.extra.donotsend) {
                                 TelegramEngine.sendTextMessage(r1.message, pid);
                             }
-                            else if(r1.extra.donotsend && r1.extra.upgrade){
+                            else if (r1.extra.donotsend && r1.extra.upgrade) {
                                 // TODO: initialize payment upgrade
+                            }
+                            else {
+                                // do not send any message back
+                                TelegramEngine.deleteMessage(mid, pid);
                             }
                         }
                     }

@@ -8,7 +8,8 @@ config({
 })
 
 export class Site {
-    static TITLE: string = process.env["TITLE"] || "Kinsmen";
+    static TITLE: string = process.env["TITLE"] || "Telora";
+    static PERSONA: string = process.env["PERSONA"] || "A warm, emotionally intelligent conversationalist. Gentle tone, empathetic responses, uses soft humor and reflection. Prefers listening and offering insight over giving direct advice.";
     static ROOT: string = process.cwd() || __dirname;
     static PORT: number = parseInt(process.env["PORT"] || "0") || 3000;
     static PRODUCTION = (process.env["PRODUCTION"] || "").toLowerCase() == "true";
@@ -40,7 +41,11 @@ export class Site {
     static DB_PORT: number = parseInt((process.env[`DB_PORT_${Site.PRODUCTION ? 'PROD' : 'DEV'}`]) || "0") || 0;
 
     static FL_CHAT_HISTORY_COUNT_LIMIT: number = parseInt(process.env['FL_CHAT_HISTORY_COUNT_LIMIT'] || '0') || 5;
+    static FL_CHAT_HISTORY_PERSIST_LIMIT: number = parseInt(process.env['FL_CHAT_HISTORY_PERSIST_LIMIT'] || '0') || 15;
     static FL_FREE_MESSAGE_LIMIT: number = parseInt(process.env['FL_FREE_MESSAGE_LIMIT'] || '0') || 5;
     static FL_PREM_MESSAGE_LIMIT: number = parseInt(process.env['FL_PREM_MESSAGE_LIMIT'] || '0') || 20;
     static FL_INFER_TIMEOUT_MS: number = parseInt(process.env['FL_INFER_TIMEOUT_MS'] || '0') || 2000;
+    static FL_MAX_MESSAGE_LENGTH: number = parseInt(process.env['FL_MAX_MESSAGE_LENGTH'] || '0') || 256;
+    static FL_MAX_REPLY_LENGTH: number = parseInt(process.env['FL_MAX_REPLY_LENGTH'] || '0') || 256;
+    static FL_SUMMARY_AFTER_REP_COUNT: number = parseInt(process.env['FL_SUMMARY_AFTER_REP_COUNT'] || '0') || 10;
 }

@@ -2,8 +2,8 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { DB } from './../engine/db';
 import { GRes, Res } from "./res";
 import { Log } from './log';
-import { ErrorResponse } from 'src/engine/error_res';
-import { Site } from 'src/site';
+import { ErrorResponse } from './../engine/error_res';
+import { Site } from './../site';
 
 export const ensureUserRegistration = (chatid: any, lang: string | undefined) => new Promise<Res>((resolve, reject) => {
     let sql = `SELECT * FROM user WHERE chatid = ?;`;
@@ -33,6 +33,12 @@ export const ensureUserRegistration = (chatid: any, lang: string | undefined) =>
                     else {
                         resolve(GRes.succ({
                             messages: [],
+                            summary: 'User is new to you and has never messaged you before.',
+                            id: result.insertId,
+                            last_rep_ts: 0,
+                            curr_rep_count: 0,
+                            mcount: 0,
+                            rep_since_summ: 0,
                         }));
                     }
                 });
@@ -56,13 +62,20 @@ export const ensureUserRegistration = (chatid: any, lang: string | undefined) =>
                 }
                 else {
                     const tsDay = Date.now() - (1000 * 60 * 60 * 24);
-                    let sql = `SELECT content, is_reply FROM message WHERE userid = ? AND ts >= ? ORDER BY id DESC LIMIT; UPDATE user SET is_infer = ?, is_infer_ts WHERE id = ?;`;
+                    let sql = `SELECT content, is_reply FROM message WHERE userid = ? AND ts >= ? ORDER BY id DESC LIMIT ${Site.FL_CHAT_HISTORY_COUNT_LIMIT}; UPDATE user SET is_infer = ?, is_infer_ts = ? WHERE id = ?; SELECT COUNT(id) AS l FROM message WHERE userid = ?;`;
                     const ins = [
                         result[0].id,
                         tsDay,
                         1,
+                        Date.now(),
+                        result[0].id,
                         result[0].id,
                     ];
+                    let summary = result[0].summary || '';
+                    let id = result[0].id;
+                    let last_rep_ts = parseInt(result[0].last_rep_ts) || 0;
+                    let curr_rep_count = parseInt(result[0].curr_rep_count) || 0;
+                    let rep_since_summ = parseInt(result[0].rep_since_summ) || 0;
                     DB.con().query<(RowDataPacket[][] | ResultSetHeader[])>(sql, ins, async (err, result) => {
                         if (err) {
                             Log.dev(err);
@@ -74,6 +87,12 @@ export const ensureUserRegistration = (chatid: any, lang: string | undefined) =>
                                     content: x.content,
                                     role: x.is_reply ? 'assistant' : 'user',
                                 })).reverse(),
+                                summary,
+                                id,
+                                last_rep_ts,
+                                curr_rep_count,
+                                mcount: (result[2] as RowDataPacket[])[0]['l'],
+                                rep_since_summ,
                             }));
                         }
                     });
