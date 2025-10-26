@@ -1,0 +1,84 @@
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { DB } from './../engine/db';
+import { GRes, Res } from "./res";
+import { Log } from './log';
+import { ErrorResponse } from 'src/engine/error_res';
+import { Site } from 'src/site';
+
+export const ensureUserRegistration = (chatid: any, lang: string | undefined) => new Promise<Res>((resolve, reject) => {
+    let sql = `SELECT * FROM user WHERE chatid = ?;`;
+    DB.con().query<RowDataPacket[]>(sql, [chatid], async (err, result) => {
+        if (err) {
+            Log.dev(err);
+            resolve(GRes.err(await ErrorResponse.get('server', lang)));
+        }
+        else {
+            if (result.length == 0) {
+                // user is not registered
+                let sql = `INSERT INTO user (chatid, metadata, reg_ts, is_infer, is_infer_ts) VALUES (?, ?, ?, ?, ?);`;
+                const ts = Date.now();
+                const meta = {};
+                const ins = [
+                    chatid,
+                    JSON.stringify(meta),
+                    ts,
+                    1,
+                    ts,
+                ];
+                DB.con().query<ResultSetHeader>(sql, ins, async (err, result) => {
+                    if (err) {
+                        Log.dev(err);
+                        resolve(GRes.err(await ErrorResponse.get('server', lang)));
+                    }
+                    else {
+                        resolve(GRes.succ({
+                            messages: [],
+                        }));
+                    }
+                });
+            }
+            else {
+                // user is registered
+                if (result[0].is_blocked) {
+                    resolve(GRes.err(await ErrorResponse.get('block', lang)));
+                }
+                else if (result[0].is_infer && (Date.now() - parseInt(result[0].is_infer_ts || '0') < Site.FL_INFER_TIMEOUT_MS)) {
+                    // inference is currently going on
+                    resolve(GRes.err('', { donotsend: true }));
+                }
+                else if (result[0].curr_rep_count >= Site.FL_FREE_MESSAGE_LIMIT && (!result[0].is_prem)) {
+                    // free limit reached
+                    resolve(GRes.err('', { donotsend: true, upgrade: true }));
+                }
+                else if (result[0].curr_rep_count >= Site.FL_PREM_MESSAGE_LIMIT && (result[0].is_prem)) {
+                    // premium limit reached
+                    resolve(GRes.err(await ErrorResponse.get('prem_limit', lang)));
+                }
+                else {
+                    const tsDay = Date.now() - (1000 * 60 * 60 * 24);
+                    let sql = `SELECT content, is_reply FROM message WHERE userid = ? AND ts >= ? ORDER BY id DESC LIMIT; UPDATE user SET is_infer = ?, is_infer_ts WHERE id = ?;`;
+                    const ins = [
+                        result[0].id,
+                        tsDay,
+                        1,
+                        result[0].id,
+                    ];
+                    DB.con().query<(RowDataPacket[][] | ResultSetHeader[])>(sql, ins, async (err, result) => {
+                        if (err) {
+                            Log.dev(err);
+                            resolve(GRes.err(await ErrorResponse.get('server', lang)));
+                        }
+                        else {
+                            resolve(GRes.succ({
+                                messages: (result[0] as RowDataPacket[]).map(x => ({
+                                    content: x.content,
+                                    role: x.is_reply ? 'assistant' : 'user',
+                                })).reverse(),
+                            }));
+                        }
+                    });
+                }
+            }
+        }
+    });
+});

@@ -38,4 +38,9 @@ export class Site {
     static DB_PASS: string = (process.env[`DB_PASS_${Site.PRODUCTION ? 'PROD' : 'DEV'}`]) || "";
     static DB_SCHEMA: string = (process.env[`DB_SCHEMA_${Site.PRODUCTION ? 'PROD' : 'DEV'}`]) || "";
     static DB_PORT: number = parseInt((process.env[`DB_PORT_${Site.PRODUCTION ? 'PROD' : 'DEV'}`]) || "0") || 0;
+
+    static FL_CHAT_HISTORY_COUNT_LIMIT: number = parseInt(process.env['FL_CHAT_HISTORY_COUNT_LIMIT'] || '0') || 5;
+    static FL_FREE_MESSAGE_LIMIT: number = parseInt(process.env['FL_FREE_MESSAGE_LIMIT'] || '0') || 5;
+    static FL_PREM_MESSAGE_LIMIT: number = parseInt(process.env['FL_PREM_MESSAGE_LIMIT'] || '0') || 20;
+    static FL_INFER_TIMEOUT_MS: number = parseInt(process.env['FL_INFER_TIMEOUT_MS'] || '0') || 2000;
 }

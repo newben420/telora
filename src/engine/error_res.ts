@@ -1,7 +1,7 @@
 import { Site } from './../site';
 import { GroqEngine } from './groq';
 import { PromptEngine } from './prompt';
-type ERType = "server" | "user" | "start";
+type ERType = "server" | "user" | "start" | "block" | "prem_limit" | "upgrade";
 
 const ERLangDef = "en";
 
@@ -13,6 +13,9 @@ const defaults: Record<ERType, string> = {
     'server': '😅🔧',
     'user': '🫣💬',
     'start': '👋🙂',
+    'block': '🔴🚫⛔️',
+    'prem_limit': '🕐🔒',
+    'upgrade': '🕐🔒',
 };
 
 /**
@@ -29,7 +32,16 @@ export class ErrorResponse {
         },
         'start': {
             "en": `Hello there! I am ${Site.TITLE}, your AI companion. What's on your mind today?`
-        }
+        },
+        'block': {
+            "en": "You have been blocked. Please do not respond or send another message."
+        },
+        'prem_limit': {
+            "en": "You have reached your message limit. Please try again in 1 hour."
+        },
+        'upgrade': {
+            "en": "You have reached your message limit. Upgrade to premium to remove your limit, or try again in 1 hour."
+        },
     }
 
     static get = (type: ERType, lang: ERLang = ERLangDef) => new Promise<string>((resolve, reject) => {

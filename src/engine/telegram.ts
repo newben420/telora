@@ -1,3 +1,4 @@
+import { ensureUserRegistration } from './../lib/ensure_registration';
 import TelegramBot from 'node-telegram-bot-api';
 import { Site } from '../site';
 import { Log } from '../lib/log';
@@ -25,12 +26,6 @@ export class TelegramEngine {
             }
 
         }
-    }
-
-    private static startMessage = () => {
-        let m: string = `👋 ${Site.TITLE} been awake since ${getDateTime(starting)}`;
-        m += `\n\n👉 Send a message conatining a bunch of valid pairs to add them to pairs e.g. \`GBPUSD=X JPYEUR=X\``;
-        return m;
     }
 
     static start = () => {
@@ -67,7 +62,18 @@ export class TelegramEngine {
                         TelegramEngine.sendTextMessage(m, pid);
                     }
                     else {
-                        TelegramEngine.sendTextMessage('Understood', pid);
+                        const r1 = await ensureUserRegistration(pid, lang);
+                        if (r1.succ) {
+                            TelegramEngine.sendTextMessage('Understood', pid);
+                        }
+                        else {
+                            if(!r1.extra.donotsend){
+                                TelegramEngine.sendTextMessage(r1.message, pid);
+                            }
+                            else if(r1.extra.donotsend && r1.extra.upgrade){
+                                // TODO: initialize payment upgrade
+                            }
+                        }
                     }
                 }
             });
@@ -75,8 +81,8 @@ export class TelegramEngine {
             TelegramEngine.bot.on("message", async (msg) => {
                 const pid = msg.from?.id || msg.chat.id;
                 const lang = msg.from?.language_code;
-                if(pid){
-                    if(!msg.text){
+                if (pid) {
+                    if (!msg.text) {
                         const m = await ErrorResponse.get('user', lang);
                         TelegramEngine.sendTextMessage(m, pid);
                     }
