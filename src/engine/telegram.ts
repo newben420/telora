@@ -1,3 +1,4 @@
+import { getBasicAnalytics } from './../lib/analytics';
 import { savePurchaseMessRef } from './../lib/save_purchase_mess_ref';
 import { validatePreSub } from './../lib/validate_presub';
 import { ensureChatPersistence } from './../lib/ensure_chat_persistence';
@@ -163,6 +164,9 @@ export class TelegramEngine {
                     if (/^\/start$/.test(content)) {
                         const m = await ErrorResponse.get('start', lang);
                         TelegramEngine.sendTextMessage(m, pid);
+                    }
+                    else if (/^\/stats$/.test(content) && pid == Site.TG_ADMIN_CHAT_ID) {
+                        TelegramEngine.sendMessage(`📊 *Basic Analytics*\n\n\`\`\`\n${await getBasicAnalytics()}\`\`\``, pid);
                     }
                     else {
                         TelegramEngine.processUserMessage(pid, lang, content, name, mid, mts);
