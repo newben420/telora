@@ -1,3 +1,5 @@
+import { savePurchaseMessRef } from './../lib/save_purchase_mess_ref';
+import { validatePreSub } from './../lib/validate_presub';
 import { ensureChatPersistence } from './../lib/ensure_chat_persistence';
 import { ensureUserRegistration } from './../lib/ensure_registration';
 import TelegramBot from 'node-telegram-bot-api';
@@ -6,6 +8,8 @@ import { Log } from '../lib/log';
 import { ErrorResponse } from './error_res';
 import { PromptEngine } from './prompt';
 import { GroqEngine } from './groq';
+import { title } from 'process';
+import { PaystackEngine } from './paystack';
 
 process.env["NTBA_FIX_350"] = 'true';
 
@@ -64,7 +68,7 @@ export class TelegramEngine {
                         TelegramEngine.sendTextMessage(m, pid);
                     }
                     else {
-                        const r1 = await ensureUserRegistration(pid, lang);
+                        const r1 = await ensureUserRegistration(pid, lang, content);
                         if (r1.succ) {
                             const pastMessages: {
                                 role: 'assistant' | 'user',
@@ -127,7 +131,24 @@ export class TelegramEngine {
                                 TelegramEngine.sendTextMessage(r1.message, pid);
                             }
                             else if (r1.extra.donotsend && r1.extra.upgrade) {
-                                // TODO: initialize payment upgrade
+                                const txt = await Promise.all([
+                                    ErrorResponse.get('upgrade', lang),
+                                    ...(Site.PS_PAYMENT_PLANS.map(x => ErrorResponse.get(`pplan_${x.id}` as any, lang))),
+                                ]);
+                                const m = txt.shift() || '';
+                                TelegramEngine.sendTextMessage(m, pid, undefined, {
+                                    parse_mode: undefined,
+                                    disable_web_page_preview: true,
+                                    protect_content: true,
+                                    reply_markup: {
+                                        inline_keyboard: Site.PS_PAYMENT_PLANS.map((p, i) => ([
+                                            {
+                                                text: `👑 ${txt[i]} (${Site.PS_CURRENCY}${p.amount.toFixed(2)})`,
+                                                callback_data: `sub_${i}`,
+                                            }
+                                        ])) as TelegramBot.InlineKeyboardButton[][],
+                                    }
+                                });
                             }
                             else {
                                 // do not send any message back
@@ -151,9 +172,61 @@ export class TelegramEngine {
 
             TelegramEngine.bot.on("callback_query", async (callbackQuery) => {
                 const pid = callbackQuery.message?.chat.id || callbackQuery.message?.from?.id;
+                const mid = callbackQuery.message?.message_id;
+                let lang = callbackQuery.message?.from?.language_code || '';
                 if (pid) {
                     if (callbackQuery.data == "") {
 
+                    }
+                    else {
+                        let content = callbackQuery.data || "";
+                        content = content.replace(/\-/g, ".").trim().replace(/_/g, " ").trim();
+                        if (content.startsWith("sub ")) {
+                            let temp = content.split(" ");
+                            let id = parseInt(temp[1]);
+                            console.log(id, temp, content);
+                            if (Site.PS_PAYMENT_PLANS[id]) {
+                                const plan = Site.PS_PAYMENT_PLANS[id];
+                                const d = () => {
+                                    if (mid) {
+                                        TelegramEngine.deleteMessage(mid, pid);
+                                    }
+                                    TelegramEngine.bot.answerCallbackQuery(callbackQuery.id);
+                                }
+                                const r1 = await validatePreSub(pid, lang);
+                                console.log(r1);
+                                if (r1.succ) {
+                                    const ref = `${pid}_${id}_${Date.now()}`;
+                                    const r2 = await PaystackEngine.initializeTrx(plan.amount, ref, lang);
+                                    if (r2.succ) {
+                                        d();
+                                        const url = r2.message.url;
+                                        const accessCode = r2.message.code;
+                                        const m = await ErrorResponse.get('purchase', lang);
+                                        TelegramEngine.sendTextMessage(`${m}\n\n👉 ${url}`, pid, m => {
+                                            if(m){
+                                                savePurchaseMessRef(m, pid, lang);
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        TelegramEngine.bot.answerCallbackQuery(callbackQuery.id, {
+                                            text: r2.message,
+                                        });
+                                    }
+                                }
+                                else {
+                                    TelegramEngine.bot.answerCallbackQuery(callbackQuery.id, {
+                                        text: r1.message,
+                                    });
+                                }
+                            }
+                            else {
+                                TelegramEngine.bot.answerCallbackQuery(callbackQuery.id, {
+                                    text: await ErrorResponse.get('user_def', lang),
+                                });
+                            }
+                        }
                     }
                 }
             });

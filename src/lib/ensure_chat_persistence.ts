@@ -23,6 +23,9 @@ export const ensureChatPersistence = (
 ) => new Promise<Res>((resolve, reject) => {
     let n_last_rep_ts = last_rep_ts <= 0 ? Date.now() : last_rep_ts;
     const isnewday = (Date.now() - n_last_rep_ts) >= (1000 * 60 * 60 * 24);
+    if(isnewday){
+        n_last_rep_ts = Date.now();
+    }
     let n_curr_rep_count = isnewday ? 1 : (curr_rep_count + 1);
     let sql = `
     INSERT INTO message (userid, messid, content, is_reply, ts) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?);

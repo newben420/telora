@@ -11,6 +11,7 @@ import { Log } from './lib/log';
 // import { Server } from 'socket.io';
 import { TelegramEngine } from './engine/telegram';
 import { getDateTime } from './lib/date_time';
+import { verifyTrx } from './lib/verify_trx';
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,8 @@ app.post("/webhook", (req, res) => {
     TelegramEngine.processWebHook(req.body);
     res.sendStatus(200);
 });
+
+app.get('/verify-trx', verifyTrx);
 
 app.use((req, res, next) => {
     res.sendStatus(404);

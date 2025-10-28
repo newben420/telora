@@ -18,6 +18,7 @@ export class Site {
     static EXIT_ON_UNHANDLED_REJECTION = (process.env["EXIT_ON_UNHANDLED_REJECTION"] || "").toLowerCase() == "true";
     static URL = Site.PRODUCTION ? (process.env["PROD_URL"] || "") : `http://localhost:${Site.PORT}`;
     static MAX_ALLOWED_FLOG_LOG_WEIGHT: number = parseInt(process.env["MAX_ALLOWED_FLOG_LOG_WEIGHT"] || "0") || 5;
+    static HTTP_TIMEOUT_MS: number = parseInt(process.env['HTTP_TIMEOUT_MS'] || '0') || 120000;
 
     static TG_TOKEN: string = process.env["TG_TOKEN"] ?? "";
     static TG_ADMIN_CHAT_ID: number = parseInt(process.env["TG_ADMIN_CHAT_ID"] ?? "0") || 0;
@@ -51,8 +52,22 @@ export class Site {
 
     static ERR_RES_EN_SERVER: string = process.env['ERR_RES_EN_SERVER'] || `Sorry!, I encountered an error while trying to respond to you. Please try again`;
     static ERR_RES_EN_USER: string = process.env['ERR_RES_EN_USER'] || `Sorry, I could not read what you sent. I only understand texts.`;
+    static ERR_RES_EN_USER_DEF: string = process.env['ERR_RES_EN_USER_DEF'] || `Sorry, I could not undertand what you sent`;
     static ERR_RES_EN_START: string = process.env['ERR_RES_EN_START'] || `Hello there! I am ${Site.TITLE}, your AI companion. What's on your mind today?`;
     static ERR_RES_EN_BLOCK: string = process.env['ERR_RES_EN_BLOCK'] || `You have been blocked. Please do not respond or send another message.`;
     static ERR_RES_EN_PREM_LIMIT: string = process.env['ERR_RES_EN_PREM_LIMIT'] || `You have reached your message limit. Please try again in 1 hour.`;
     static ERR_RES_EN_UPGRADE: string = process.env['ERR_RES_EN_UPGRADE'] || `You have reached your message limit. Upgrade to premium to remove your limit, or try again in 1 hour.`;
+    static ERR_RES_EN_PURCHASE: string = process.env['ERR_RES_EN_PURCHASE'] || `Open this link to complete your purchase securely with Paystack.`;
+    static ERR_RES_EN_PURCHASE_FAILED: string = process.env['ERR_RES_EN_PURCHASE_FAILED'] || `Your payment failed.`;
+
+    static PS_PUB_KEY: string = process.env['PS_PUB_KEY'] || '';
+    static PS_ENDPOINT: string = process.env['PS_ENDPOINT'] || 'https://api.paystack.co';
+    static PS_SEC_KEY: string = process.env['PS_SEC_KEY'] || '';
+    static PS_CURRENCY: string = process.env['PS_CURRENCY'] || '';
+    static PS_CB_EMAIL: string = process.env['PS_CB_EMAIL'] || '';
+    static PS_PAYMENT_PLANS = (process.env['PS_PAYMENT_PLANS'] || '').split('|').map(x => x.split(' ').filter(x => x.length > 0)).map(x => ({
+        id: x[0],
+        duration: parseInt(x[1]) || 0,
+        amount: parseFloat(x[2]) || 0,
+    }));
 }

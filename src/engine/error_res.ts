@@ -1,7 +1,9 @@
 import { Site } from './../site';
 import { GroqEngine } from './groq';
 import { PromptEngine } from './prompt';
-type ERType = "server" | "user" | "start" | "block" | "prem_limit" | "upgrade";
+type ERType = "server" | "user" | "start" | "block" | "prem_limit" | "upgrade" |
+    "pplan_week" | "pplan_month" | "pplan_year" | "pplan_life" | "user_def" | "purchase"
+    | "purchase_failed";
 
 const ERLangDef = "en";
 
@@ -12,10 +14,17 @@ type ERCache = Record<ERType, Record<ERLang, string>>;
 const defaults: Record<ERType, string> = {
     'server': '😅🔧',
     'user': '🫣💬',
+    'user_def': '🫣💬',
     'start': '👋🙂',
     'block': '🔴🚫⛔️',
     'prem_limit': '🕐🔒',
     'upgrade': '🕐🔒',
+    "pplan_week": "1 Week",
+    "pplan_month": "1 Month",
+    "pplan_year": "1 Year",
+    "pplan_life": "Lifetime",
+    "purchase": "💰✅",
+    "purchase_failed": "🚫⛔️",
 };
 
 /**
@@ -30,6 +39,9 @@ export class ErrorResponse {
         'user': {
             "en": Site.ERR_RES_EN_USER,
         },
+        'user_def': {
+            "en": Site.ERR_RES_EN_USER_DEF,
+        },
         'start': {
             "en": Site.ERR_RES_EN_START,
         },
@@ -42,6 +54,24 @@ export class ErrorResponse {
         'upgrade': {
             "en": Site.ERR_RES_EN_UPGRADE,
         },
+        'purchase': {
+            "en": Site.ERR_RES_EN_PURCHASE,
+        },
+        "pplan_week": {
+            "en": "1 Week",
+        },
+        "pplan_month": {
+            "en": "1 Month",
+        },
+        "pplan_year": {
+            "en": "1 Year",
+        },
+        "pplan_life": {
+            "en": "Lifetime",
+        },
+        "purchase_failed": {
+            "en": Site.ERR_RES_EN_PURCHASE_FAILED,
+        }
     }
 
     static get = (type: ERType, lang: ERLang = ERLangDef) => new Promise<string>((resolve, reject) => {
