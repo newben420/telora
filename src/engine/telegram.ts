@@ -32,6 +32,103 @@ export class TelegramEngine {
         }
     }
 
+    static processUserMessage = async (
+        pid: any,
+        lang: any,
+        content: string,
+        name: any,
+        mid: any,
+        mts: number,
+    ) => {
+        const r1 = await ensureUserRegistration(pid, lang, content, mid, name);
+        if (r1.succ) {
+            const pastMessages: {
+                role: 'assistant' | 'user',
+                content: string,
+            }[] = r1.message.messages;
+            const system: {
+                role: 'system',
+                content: string,
+            } = {
+                role: 'system',
+                content: PromptEngine.chatSystem(`${name ? `User's first name is ${name}. ` : ''}${r1.message.summary}`),
+            }
+            const userid: number = r1.message.id;
+            const last_rep_ts = r1.message.last_rep_ts;
+            const curr_rep_count = r1.message.curr_rep_count;
+            const mcount = r1.message.mcount;
+            const rep_since_summ = r1.message.rep_since_summ;
+            const messages = [
+                system,
+                ...pastMessages,
+                {
+                    role: 'user',
+                    content: content.length > Site.FL_MAX_MESSAGE_LENGTH ? content.slice(0, Site.FL_MAX_MESSAGE_LENGTH) : content,
+                }
+            ] as any;
+            GroqEngine.request({
+                messages,
+                async callback(r2) {
+                    if (r2.succ) {
+                        const reply = r2.message;
+                        TelegramEngine.sendTextMessage(reply, pid, rid => {
+                            if (rid) {
+                                const rts = Date.now();
+                                const r3 = ensureChatPersistence(
+                                    content,
+                                    mid,
+                                    mts,
+                                    reply,
+                                    rid,
+                                    rts,
+                                    userid,
+                                    last_rep_ts,
+                                    curr_rep_count,
+                                    mcount,
+                                    rep_since_summ,
+                                    r1.message.summary,
+                                )
+                            }
+                        });
+                    }
+                    else {
+                        const m = await ErrorResponse.get('server', lang);
+                        TelegramEngine.sendTextMessage(m, pid);
+                    }
+                },
+            });
+        }
+        else {
+            if (!r1.extra.donotsend) {
+                TelegramEngine.sendTextMessage(r1.message, pid);
+            }
+            else if (r1.extra.donotsend && r1.extra.upgrade) {
+                const txt = await Promise.all([
+                    ErrorResponse.get('upgrade', lang),
+                    ...(Site.PS_PAYMENT_PLANS.map(x => ErrorResponse.get(`pplan_${x.id}` as any, lang))),
+                ]);
+                const m = txt.shift() || '';
+                TelegramEngine.sendTextMessage(m, pid, undefined, {
+                    parse_mode: undefined,
+                    disable_web_page_preview: true,
+                    protect_content: true,
+                    reply_markup: {
+                        inline_keyboard: Site.PS_PAYMENT_PLANS.map((p, i) => ([
+                            {
+                                text: `👑 ${txt[i]} (${Site.PS_CURRENCY}${p.amount.toFixed(2)})`,
+                                callback_data: `sub_${i}`,
+                            }
+                        ])) as TelegramBot.InlineKeyboardButton[][],
+                    }
+                });
+            }
+            else {
+                // do not send any message back
+                TelegramEngine.deleteMessage(mid, pid);
+            }
+        }
+    }
+
     static start = () => {
         return new Promise<boolean>((resolve, reject) => {
             TelegramEngine.bot = new TelegramBot(Site.TG_TOKEN, {
@@ -68,93 +165,7 @@ export class TelegramEngine {
                         TelegramEngine.sendTextMessage(m, pid);
                     }
                     else {
-                        const r1 = await ensureUserRegistration(pid, lang, content);
-                        if (r1.succ) {
-                            const pastMessages: {
-                                role: 'assistant' | 'user',
-                                content: string,
-                            }[] = r1.message.messages;
-                            const system: {
-                                role: 'system',
-                                content: string,
-                            } = {
-                                role: 'system',
-                                content: PromptEngine.chatSystem(`${name ? `User's first name is ${name}. ` : ''}${r1.message.summary}`),
-                            }
-                            const userid: number = r1.message.id;
-                            const last_rep_ts = r1.message.last_rep_ts;
-                            const curr_rep_count = r1.message.curr_rep_count;
-                            const mcount = r1.message.mcount;
-                            const rep_since_summ = r1.message.rep_since_summ;
-                            const messages = [
-                                system,
-                                ...pastMessages,
-                                {
-                                    role: 'user',
-                                    content: content.length > Site.FL_MAX_MESSAGE_LENGTH ? content.slice(0, Site.FL_MAX_MESSAGE_LENGTH) : content,
-                                }
-                            ] as any;
-                            GroqEngine.request({
-                                messages,
-                                async callback(r2) {
-                                    if (r2.succ) {
-                                        const reply = r2.message;
-                                        TelegramEngine.sendTextMessage(reply, pid, rid => {
-                                            if (rid) {
-                                                const rts = Date.now();
-                                                const r3 = ensureChatPersistence(
-                                                    content,
-                                                    mid,
-                                                    mts,
-                                                    reply,
-                                                    rid,
-                                                    rts,
-                                                    userid,
-                                                    last_rep_ts,
-                                                    curr_rep_count,
-                                                    mcount,
-                                                    rep_since_summ,
-                                                    r1.message.summary,
-                                                )
-                                            }
-                                        });
-                                    }
-                                    else {
-                                        const m = await ErrorResponse.get('server', lang);
-                                        TelegramEngine.sendTextMessage(m, pid);
-                                    }
-                                },
-                            });
-                        }
-                        else {
-                            if (!r1.extra.donotsend) {
-                                TelegramEngine.sendTextMessage(r1.message, pid);
-                            }
-                            else if (r1.extra.donotsend && r1.extra.upgrade) {
-                                const txt = await Promise.all([
-                                    ErrorResponse.get('upgrade', lang),
-                                    ...(Site.PS_PAYMENT_PLANS.map(x => ErrorResponse.get(`pplan_${x.id}` as any, lang))),
-                                ]);
-                                const m = txt.shift() || '';
-                                TelegramEngine.sendTextMessage(m, pid, undefined, {
-                                    parse_mode: undefined,
-                                    disable_web_page_preview: true,
-                                    protect_content: true,
-                                    reply_markup: {
-                                        inline_keyboard: Site.PS_PAYMENT_PLANS.map((p, i) => ([
-                                            {
-                                                text: `👑 ${txt[i]} (${Site.PS_CURRENCY}${p.amount.toFixed(2)})`,
-                                                callback_data: `sub_${i}`,
-                                            }
-                                        ])) as TelegramBot.InlineKeyboardButton[][],
-                                    }
-                                });
-                            }
-                            else {
-                                // do not send any message back
-                                TelegramEngine.deleteMessage(mid, pid);
-                            }
-                        }
+                        TelegramEngine.processUserMessage(pid, lang, content, name, mid, mts);
                     }
                 }
             });
@@ -184,7 +195,6 @@ export class TelegramEngine {
                         if (content.startsWith("sub ")) {
                             let temp = content.split(" ");
                             let id = parseInt(temp[1]);
-                            console.log(id, temp, content);
                             if (Site.PS_PAYMENT_PLANS[id]) {
                                 const plan = Site.PS_PAYMENT_PLANS[id];
                                 const d = () => {
@@ -194,7 +204,6 @@ export class TelegramEngine {
                                     TelegramEngine.bot.answerCallbackQuery(callbackQuery.id);
                                 }
                                 const r1 = await validatePreSub(pid, lang);
-                                console.log(r1);
                                 if (r1.succ) {
                                     const ref = `${pid}_${id}_${Date.now()}`;
                                     const r2 = await PaystackEngine.initializeTrx(plan.amount, ref, lang);
@@ -204,7 +213,7 @@ export class TelegramEngine {
                                         const accessCode = r2.message.code;
                                         const m = await ErrorResponse.get('purchase', lang);
                                         TelegramEngine.sendTextMessage(`${m}\n\n👉 ${url}`, pid, m => {
-                                            if(m){
+                                            if (m) {
                                                 savePurchaseMessRef(m, pid, lang);
                                             }
                                         });

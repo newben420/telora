@@ -5,7 +5,7 @@ import { Log } from './log';
 import { ErrorResponse } from './../engine/error_res';
 import { Site } from './../site';
 
-export const ensureUserRegistration = (chatid: any, lang: string | undefined, mess: string) => new Promise<Res>((resolve, reject) => {
+export const ensureUserRegistration = (chatid: any, lang: string | undefined, mess: string, mess_id: any, name: any) => new Promise<Res>((resolve, reject) => {
     let sql = `SELECT * FROM user WHERE chatid = ?;`;
     DB.con().query<RowDataPacket[]>(sql, [chatid], async (err, result) => {
         if (err) {
@@ -54,9 +54,9 @@ export const ensureUserRegistration = (chatid: any, lang: string | undefined, me
                 }
                 else if (result[0].curr_rep_count >= Site.FL_FREE_MESSAGE_LIMIT && ((!result[0].is_prem) || ((!!result[0].is_prem) && ((parseInt(result[0].prem_exp) || 0) < Date.now())))) {
                     // free limit reached
-                    let sql = `UPDATE user SET temp_mess = ? WHERE id = ?;`;
+                    let sql = `UPDATE user SET temp_mess = ?, temp_mess_id = ?, temp_name = ? WHERE id = ?;`;
                     const id = result[0].id;
-                    DB.con().query(sql, [mess.slice(0, Site.FL_MAX_MESSAGE_LENGTH), id], (err, result) => {
+                    DB.con().query(sql, [mess.slice(0, Site.FL_MAX_MESSAGE_LENGTH), mess_id || 0, name, id], (err, result) => {
                         if(err){
                             Log.dev(err);
                         }

@@ -24,6 +24,8 @@ export const validatePostSub = (
                         mess: u.temp_mess,
                         puid: parseInt(u.pur_mess_id) || 0,
                         lang: u.temp_lang,
+                        messid: u.temp_mess_id,
+                        name: u.temp_name,
                     }));
                 }
                 else{

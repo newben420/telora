@@ -12,6 +12,7 @@ import { Log } from './lib/log';
 import { TelegramEngine } from './engine/telegram';
 import { getDateTime } from './lib/date_time';
 import { verifyTrx } from './lib/verify_trx';
+import { cancelTrx } from './lib/cancel_trx';
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,7 @@ app.post("/webhook", (req, res) => {
 });
 
 app.get('/verify-trx', verifyTrx);
+app.get('/cancel-trx', cancelTrx);
 
 app.use((req, res, next) => {
     res.sendStatus(404);
@@ -100,7 +102,7 @@ startEngine().then(r => {
             Log.flow([Site.TITLE, 'Sucessfully started all engines.'], 0);
             Log.flow([Site.TITLE, `Running at http://127.0.0.1:${Site.PORT}`], 0);
             // if (Site.PRODUCTION) {
-                TelegramEngine.sendMessage(`😊 ${Site.TITLE} has woken up at ${getDateTime()}`, Site.TG_ADMIN_CHAT_ID);
+            TelegramEngine.sendMessage(`😊 ${Site.TITLE} has woken up at ${getDateTime()}`, Site.TG_ADMIN_CHAT_ID);
             // }
         });
     }
