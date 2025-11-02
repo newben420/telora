@@ -3,7 +3,7 @@ import { GroqEngine } from './groq';
 import { PromptEngine } from './prompt';
 type ERType = "server" | "user" | "start" | "block" | "prem_limit" | "upgrade" |
     "pplan_week" | "pplan_month" | "pplan_year" | "pplan_life" | "user_def" | "purchase"
-    | "purchase_failed";
+    | "purchase_failed" | "data_cleared";
 
 const ERLangDef = "en";
 
@@ -25,6 +25,7 @@ const defaults: Record<ERType, string> = {
     "pplan_life": "Lifetime",
     "purchase": "💰✅",
     "purchase_failed": "🚫⛔️",
+    "data_cleared": "🗑✅",
 };
 
 /**
@@ -71,7 +72,10 @@ export class ErrorResponse {
         },
         "purchase_failed": {
             "en": Site.ERR_RES_EN_PURCHASE_FAILED,
-        }
+        },
+        "data_cleared": {
+            "en": Site.ERR_RES_EN_DATA_CLEARED,
+        },
     }
 
     static get = (type: ERType, lang: ERLang = ERLangDef) => new Promise<string>((resolve, reject) => {

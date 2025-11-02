@@ -1,3 +1,4 @@
+import { clearUserContext } from './../lib/clear_context';
 import { getBasicAnalytics } from './../lib/analytics';
 import { savePurchaseMessRef } from './../lib/save_purchase_mess_ref';
 import { validatePreSub } from './../lib/validate_presub';
@@ -141,12 +142,19 @@ export class TelegramEngine {
                     url: '',
                 }
             });
-            TelegramEngine.bot.setMyCommands([
+            const commands: TelegramBot.BotCommand[] = [
                 {
                     command: "/start",
                     description: "👋"
                 },
-            ]);
+            ];
+            if (Site.FL_USER_CAN_CLEAR_DATA) {
+                commands.push({
+                    command: '/reset',
+                    description: '🗑 Reset Context',
+                });
+            }
+            TelegramEngine.bot.setMyCommands(commands);
             if (!Site.TG_POLLING) {
                 TelegramEngine.bot.setWebHook(`${Site.URL}/webhook`, {
                     secret_token: Site.TG_WH_SECRET_TOKEN,
@@ -167,6 +175,15 @@ export class TelegramEngine {
                     }
                     else if (/^\/stats$/.test(content) && pid == Site.TG_ADMIN_CHAT_ID) {
                         TelegramEngine.sendMessage(`📊 *Basic Analytics*\n\n\`\`\`\n${await getBasicAnalytics()}\`\`\``, pid);
+                    }
+                    else if (/^\/reset$/.test(content)) {
+                        if (Site.FL_USER_CAN_CLEAR_DATA) {
+                            TelegramEngine.sendTextMessage((await clearUserContext(pid, lang)).message, pid);
+                        }
+                        else {
+                            const m = await ErrorResponse.get('user', lang);
+                            TelegramEngine.sendTextMessage(m, pid);
+                        }
                     }
                     else {
                         TelegramEngine.processUserMessage(pid, lang, content, name, mid, mts);
