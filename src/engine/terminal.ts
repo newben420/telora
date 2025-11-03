@@ -1,10 +1,11 @@
 import { getDateTime } from "../lib/date_time";
 import { Site } from "../site";
+import { CurrencyEngine } from "./currency";
 import { GroqEngine } from "./groq";
 import { TelegramEngine } from "./telegram";
 
 export const startEngine = () => new Promise<boolean>(async (resolve, reject) => {
-    const loaded = (await TelegramEngine.start());
+    const loaded = (await TelegramEngine.start()) && (await CurrencyEngine.start());
     resolve(loaded);
 });
 

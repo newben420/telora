@@ -12,6 +12,7 @@ import { PromptEngine } from './prompt';
 import { GroqEngine } from './groq';
 import { title } from 'process';
 import { PaystackEngine } from './paystack';
+import { CurrencyEngine } from './currency';
 
 process.env["NTBA_FIX_350"] = 'true';
 
@@ -115,12 +116,14 @@ export class TelegramEngine {
                     disable_web_page_preview: true,
                     protect_content: true,
                     reply_markup: {
-                        inline_keyboard: Site.PS_PAYMENT_PLANS.map((p, i) => ([
+                        inline_keyboard: Site.PS_PAYMENT_PLANS.map((p, i) => {
+                            const amtInUSD = CurrencyEngine.convert(p.amount);
+                            return [
                             {
-                                text: `👑 ${txt[i]} (${Site.PS_CURRENCY}${p.amount.toFixed(2)})`,
+                                text: `👑 ${txt[i]} 💴 $${amtInUSD}${Site.PS_CURRENCY.toLowerCase() == 'usd' ? `` : ` (${Site.PS_CURRENCY}${p.amount.toFixed(2)})`}`,
                                 callback_data: `sub_${i}`,
                             }
-                        ])) as TelegramBot.InlineKeyboardButton[][],
+                        ]}) as TelegramBot.InlineKeyboardButton[][],
                     }
                 });
             }
